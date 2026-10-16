@@ -20,6 +20,13 @@ export const ACTIONS: { action: Action; title: string; tone: string }[] = [
   { action: "not_stated", title: "Ask your care team what to do if you have", tone: "ask" },
 ];
 
+const INSTRUCTED_LABELS: Record<Action, string> = {
+  call_911: "call 911",
+  go_to_er: "go to the emergency room",
+  call_care_team: "call your care team",
+  not_stated: "nothing specific",
+};
+
 function Source({ text, show }: { text: string; show: boolean }) {
   if (!show || !text) return null;
   return (
@@ -83,7 +90,7 @@ export default function CarePlanView({ plan, dropped, onStartOver }: Props) {
       <Section title="When to get help" empty={plan.warning_signs.length === 0}>
         <div className="warnings">
           {ACTIONS.map(({ action, title, tone }) => {
-            const signs = plan.warning_signs.filter((sign) => sign.instructed_action === action);
+            const signs = plan.warning_signs.filter((sign) => sign.action === action);
             if (signs.length === 0) return null;
             return (
               <div key={action} className={`warning warning-${tone}`}>
@@ -92,6 +99,12 @@ export default function CarePlanView({ plan, dropped, onStartOver }: Props) {
                   {signs.map((sign) => (
                     <li key={sign.sign + sign.source}>
                       {sign.sign}
+                      {sign.red_flag && (
+                        <span className="raised">
+                          Moved up by CareBridge: {sign.red_flag} can be a sign of an emergency. Your instructions
+                          said: {INSTRUCTED_LABELS[sign.instructed_action]}.
+                        </span>
+                      )}
                       <Source text={sign.source} show={showSources} />
                     </li>
                   ))}

@@ -351,6 +351,12 @@ textarea:focus {
 .warning-call h3 {
   color: var(--call);
 }
+.raised {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
 .warning-ask {
   background: var(--surface-soft);
   border-color: var(--muted);

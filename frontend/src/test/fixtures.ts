@@ -28,8 +28,15 @@ export const planResult: PlanResult = {
     avoid: [{ text: "Don't lift more than 10 pounds.", source: "No heavy lifting over 10 lbs" }],
     self_care: [{ text: "Weigh yourself every morning.", source: "Weigh yourself every morning" }],
     warning_signs: [
-      { sign: "Dizziness", instructed_action: "call_care_team", source: "dizziness" },
-      { sign: "Chest pain", instructed_action: "call_911", source: "CALL 911 IF: chest pain" },
+      { sign: "Dizziness", instructed_action: "call_care_team", action: "call_care_team", red_flag: "", source: "dizziness" },
+      { sign: "Chest pain", instructed_action: "call_911", action: "call_911", red_flag: "", source: "CALL 911 IF: chest pain" },
+      {
+        sign: "Lips turn blue",
+        instructed_action: "call_care_team",
+        action: "call_911",
+        red_flag: "blue or grey skin",
+        source: "lips turning blue",
+      },
     ],
     questions_for_care_team: ["What time is my appointment?"],
   },

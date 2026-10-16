@@ -334,3 +334,39 @@ def test_purposes_the_instructions_dont_state_are_cleared(purpose_source):
 def test_stated_purposes_are_kept():
     result = build_plan(HEART, FakeModel(plan_dict()))
     assert result.plan.medications[0].purpose == "Water pill"
+
+
+def test_red_flags_raise_under_stated_warning_signs():
+    pneumonia = SAMPLES["pneumonia"]["instructions"]
+    signs = [
+        {
+            "sign": "Lips turn blue",
+            "instructed_action": "call_care_team",
+            "source": "lips turning blue",
+        },
+        {
+            "sign": "Fever comes back",
+            "instructed_action": "call_care_team",
+            "source": "fever returns",
+        },
+    ]
+    result = build_plan(
+        pneumonia,
+        FakeModel(
+            plan_dict(
+                medications=[],
+                appointments=[],
+                avoid=[],
+                self_care=[],
+                warning_signs=signs,
+            )
+        ),
+    )
+
+    lips, fever = result.plan.warning_signs
+    assert (lips.instructed_action, lips.action, lips.red_flag) == (
+        "call_care_team",
+        "call_911",
+        "blue or grey skin",
+    )
+    assert (fever.action, fever.red_flag) == ("call_care_team", "")

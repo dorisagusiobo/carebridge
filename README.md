@@ -15,6 +15,7 @@ The AI extracts; it never advises.
 - **Every item must quote the instructions.** Each medicine, appointment, instruction and warning sign comes with a word-for-word quote. Code checks the quote is really in the instructions and drops the item if it isn't, so the plan can't contain anything the care team didn't write.
 - **Purposes are only given when stated.** If the instructions don't say what a medicine is for, the plan doesn't guess.
 - **Code, not the AI, reads what to do about a warning sign.** "CALL 911 IF", "Return to the ER" and "CALL YOUR DOCTOR IF" are read from the text around each symptom.
+- **Emergency signs always escalate.** Fixed rules based on the American College of Emergency Physicians' warning signs of a medical emergency ([MedlinePlus](https://medlineplus.gov/ency/article/001927.htm)) raise signs like trouble breathing, chest pain, confusion or blue lips to "call 911", even when the paperwork says "seek care". Rules only ever raise urgency, and the plan says when and why it did.
 - **Gaps become questions.** Missing dates or durations turn into questions to ask the care team instead of guesses.
 - **Instructions are treated as data**, so text inside them can't change the rules.
 
@@ -54,7 +55,7 @@ cd ../frontend && npm test   # component and page tests
 
 - [x] Day 1: instructions → structured, grounded care plan
 - [x] Day 2: plain-language plan view
-- [ ] Day 3: warning-sign rules and escalation
+- [x] Day 3: warning-sign rules and escalation
 - [ ] Day 4: daily check-in and progress log
 - [ ] Day 5: read aloud and translation
 - [ ] Day 6–7: deploy, notices, case study
