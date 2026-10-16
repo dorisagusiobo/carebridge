@@ -43,6 +43,10 @@ npm run dev        # http://localhost:3000, proxies /api to the backend on :8000
 
 The plan view groups warning signs by urgency (911, emergency room, call your care team), labels new, changed and stopped medicines, can show the quote behind every line, prints cleanly, and turns gaps into questions to copy. Body text uses Atkinson Hyperlegible, a typeface designed by the Braille Institute for readers with low vision.
 
+### Daily check-in
+
+Questions come straight from the plan (no AI): which warning signs you have today, whether you took each medicine, and which self-care steps you did. Reporting a warning sign shows what to do right away, using the plan's checked action (so blue lips means "Call 911 now" even if the paperwork said "seek care"). A missed dose never gets dosing advice, only "ask your care team or pharmacist". The plan and check-ins are saved in the browser only; nothing is stored on a server, and Start over deletes them.
+
 ## Tests
 
 ```bash
@@ -56,7 +60,7 @@ cd ../frontend && npm test   # component and page tests
 - [x] Day 1: instructions → structured, grounded care plan
 - [x] Day 2: plain-language plan view
 - [x] Day 3: warning-sign rules and escalation
-- [ ] Day 4: daily check-in and progress log
+- [x] Day 4: daily check-in and progress log
 - [ ] Day 5: read aloud and translation
 - [ ] Day 6–7: deploy, notices, case study
 
