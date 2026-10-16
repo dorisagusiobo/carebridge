@@ -25,7 +25,12 @@ export interface Instruction {
 
 export interface WarningSign {
   sign: string;
+  /** What the instructions say to do. */
   instructed_action: Action;
+  /** What to do: the instructed action, raised by a red-flag rule if needed. */
+  action: Action;
+  /** The emergency sign that raised the action, or "". */
+  red_flag: string;
   source: string;
 }
 

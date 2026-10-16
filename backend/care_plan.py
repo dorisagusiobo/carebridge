@@ -12,6 +12,8 @@ from typing import Annotated, Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
 
+import red_flags
+
 MIN_INSTRUCTIONS_CHARS = 40
 MAX_INSTRUCTIONS_CHARS = 12_000
 
@@ -82,8 +84,24 @@ class CarePlan(Strict):
     )
 
 
+Action = Literal["call_911", "go_to_er", "call_care_team", "not_stated"]
+
+
+class CheckedWarningSign(WarningSign):
+    action: Action = Field(
+        description="What to do: the instructed action, raised by a red-flag rule if needed."
+    )
+    red_flag: str = Field(
+        description="The emergency sign that raised the action, or empty."
+    )
+
+
+class CheckedPlan(CarePlan):
+    warning_signs: list[CheckedWarningSign]  # type: ignore[assignment]
+
+
 class PlanResult(Strict):
-    plan: CarePlan
+    plan: CheckedPlan
     dropped: list[str] = Field(
         description="Items removed because their quote wasn't in the instructions."
     )
@@ -223,19 +241,36 @@ def ground_plan(plan: CarePlan, instructions: str) -> PlanResult:
         )
         for sign in plan.warning_signs
     ]
-    grounded = plan.model_copy(
-        update={
-            "medications": [
-                med
-                if med.purpose_source and is_grounded(med.purpose_source, haystack)
-                else med.model_copy(update={"purpose": "", "purpose_source": ""})
-                for med in keep(plan.medications, "medication")
-            ],
-            "appointments": keep(plan.appointments, "appointment"),
-            "avoid": keep(plan.avoid, "avoid"),
-            "self_care": keep(plan.self_care, "self-care"),
-            "warning_signs": keep(signs, "warning sign"),
-        }
+    medications = [
+        med
+        if med.purpose_source and is_grounded(med.purpose_source, haystack)
+        else med.model_copy(update={"purpose": "", "purpose_source": ""})
+        for med in keep(plan.medications, "medication")
+    ]
+    appointments = keep(plan.appointments, "appointment")
+    avoid = keep(plan.avoid, "avoid")
+    self_care = keep(plan.self_care, "self-care")
+
+    checked_signs = []
+    for sign in keep(signs, "warning sign"):
+        action, flag = red_flags.escalate(
+            sign.instructed_action, sign.sign, sign.source
+        )
+        checked_signs.append(
+            CheckedWarningSign(
+                **sign.model_dump(), action=action, red_flag=flag.name if flag else ""
+            )
+        )
+
+    grounded = CheckedPlan(
+        reason_for_stay=plan.reason_for_stay,
+        summary=plan.summary,
+        medications=medications,
+        appointments=appointments,
+        avoid=avoid,
+        self_care=self_care,
+        warning_signs=checked_signs,
+        questions_for_care_team=plan.questions_for_care_team,
     )
     return PlanResult(plan=grounded, dropped=dropped)
 

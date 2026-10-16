@@ -23,6 +23,7 @@ testpaths = ["tests"]
 addopts = [
   "--cov=main",
   "--cov=care_plan",
+  "--cov=red_flags",
   "--cov-branch",
   "--cov-report=term-missing",
   "--cov-fail-under=90",

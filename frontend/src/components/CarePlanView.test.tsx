@@ -31,6 +31,19 @@ describe("CarePlanView", () => {
     expect(within(urgent).getByText("Chest pain")).toBeInTheDocument();
   });
 
+  it("files raised signs under their new action and says why", () => {
+    renderPlan();
+    const urgent = screen.getByRole("heading", { name: "Call 911 right away if you have:" }).parentElement as HTMLElement;
+
+    expect(within(urgent).getByText("Lips turn blue")).toBeInTheDocument();
+    expect(within(urgent).getByText(/Moved up by CareBridge: blue or grey skin can be a sign of an emergency/)).toHaveTextContent(
+      "Your instructions said: call your care team.",
+    );
+    const call = screen.getByRole("heading", { name: "Call your doctor or care team if you have:" })
+      .parentElement as HTMLElement;
+    expect(within(call).queryByText("Lips turn blue")).not.toBeInTheDocument();
+  });
+
   it("labels medicine changes and explains stopped medicines", () => {
     renderPlan();
     expect(screen.getByText("New")).toBeInTheDocument();
