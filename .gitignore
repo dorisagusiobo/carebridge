@@ -8,3 +8,4 @@ __pycache__/
 node_modules/
 frontend/out/
 frontend/.next/
+backend/static/
