@@ -46,8 +46,22 @@ class RateLimiter:
 
 
 def visitor_id(request: Request) -> str:
-    # Render and most proxies put the client's address first in X-Forwarded-For.
-    forwarded = request.headers.get("x-forwarded-for", "")
+    """The visitor's address, in a form they can't fake.
+
+    Render sits behind Cloudflare, which sets CF-Connecting-IP itself and
+    overwrites any value a visitor sends. X-Forwarded-For is not safe to read
+    from the left: Render appends to it rather than replacing what the visitor
+    sent, so its first entry can be anything. The last entry is the one added
+    by the proxy closest to us.
+    """
+    cloudflare = request.headers.get("cf-connecting-ip", "").strip()
+    if cloudflare:
+        return cloudflare
+    forwarded = [
+        part.strip()
+        for part in request.headers.get("x-forwarded-for", "").split(",")
+        if part.strip()
+    ]
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        return forwarded[-1]
     return request.client.host if request.client else "unknown"
