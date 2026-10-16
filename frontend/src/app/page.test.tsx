@@ -9,11 +9,18 @@ import Home from "./page";
 const instructions = "Furosemide 40 mg PO once daily in the morning. Weigh yourself every morning.";
 
 function mockFetch(planResponse: Response) {
-  return vi.spyOn(global, "fetch").mockImplementation(async (input) =>
-    String(input).endsWith("/api/samples")
-      ? Response.json([{ id: "hf", title: "Heart failure", patient: "Fictional", instructions }])
-      : planResponse,
-  );
+  return vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/api/samples")) {
+      return Response.json([{ id: "hf", title: "Heart failure", patient: "Fictional", instructions }]);
+    }
+    if (url.endsWith("/api/translate")) {
+      const { texts, cacheable } = JSON.parse(String(init?.body));
+      expect(cacheable).toBe(texts.includes("Your plan"));
+      return Response.json({ texts: texts.map((text: string) => `ES ${text}`), kept_english: [] });
+    }
+    return planResponse;
+  });
 }
 
 afterEach(() => {
@@ -137,6 +144,68 @@ describe("Daily check-in", () => {
 
     vi.spyOn(window, "confirm").mockReturnValue(false);
     await user.click(screen.getByRole("button", { name: "Start over" }));
+    expect(screen.getByRole("heading", { name: "What to do at home" })).toBeInTheDocument();
+  });
+});
+
+describe("Language", () => {
+  it("translates the whole screen, keeps check-ins, and survives a reload", async () => {
+    const user = userEvent.setup();
+    mockFetch(Response.json(planResult));
+    Element.prototype.scrollIntoView = vi.fn();
+    const { unmount } = render(<Home />);
+    await makePlan(user);
+
+    await user.click(screen.getByRole("button", { name: "Daily check-in" }));
+    await user.click(screen.getByLabelText("Lips turn blue"));
+    await user.click(screen.getByRole("button", { name: "Save today's check-in" }));
+
+    await user.selectOptions(screen.getByLabelText("Language"), "es");
+    expect(await screen.findByRole("heading", { name: "ES How are you today?" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("ES Call 911 now.");
+    expect(screen.getByRole("alert")).toHaveTextContent("es lips turn blue");
+    expect(screen.getByText(/ES Translated by AI/)).toBeInTheDocument();
+    expect(document.querySelector('[lang="es"]')).not.toBeNull();
+
+    unmount();
+    render(<Home />);
+    expect(await screen.findByRole("button", { name: "ES Your plan" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ES What to do at home" })).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("ES Language"), "en");
+    expect(screen.getByRole("heading", { name: "What to do at home" })).toBeInTheDocument();
+  });
+
+  it("shows right-to-left languages right to left", async () => {
+    const user = userEvent.setup();
+    mockFetch(Response.json(planResult));
+    Element.prototype.scrollIntoView = vi.fn();
+    render(<Home />);
+    await makePlan(user);
+
+    await user.selectOptions(screen.getByLabelText("Language"), "ar");
+    await screen.findByRole("heading", { name: "ES What to do at home" });
+    expect(document.querySelector('[dir="rtl"]')).not.toBeNull();
+  });
+
+  it("explains a failed translation and stays in English", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/samples")) {
+        return Response.json([{ id: "hf", title: "Heart failure", patient: "Fictional", instructions }]);
+      }
+      if (url.endsWith("/api/translate")) {
+        return Response.json({ detail: "The translation service is unavailable. Please try again." }, { status: 502 });
+      }
+      return Response.json(planResult);
+    });
+    Element.prototype.scrollIntoView = vi.fn();
+    render(<Home />);
+    await makePlan(user);
+
+    await user.selectOptions(screen.getByLabelText("Language"), "vi");
+    expect(await screen.findByRole("alert")).toHaveTextContent("translation service is unavailable");
     expect(screen.getByRole("heading", { name: "What to do at home" })).toBeInTheDocument();
   });
 });

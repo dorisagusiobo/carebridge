@@ -7,18 +7,16 @@ import CheckInForm from "@/components/CheckInForm";
 import CheckInResult from "@/components/CheckInResult";
 import InstructionsForm from "@/components/InstructionsForm";
 import ProgressLog from "@/components/ProgressLog";
-import { createPlan, fetchSamples } from "@/lib/api";
+import ReadAloud from "@/components/ReadAloud";
+import { createPlan, fetchSamples, translateTexts } from "@/lib/api";
 import { today, upsert, type CheckIn } from "@/lib/checkin";
+import { EN, LANGUAGES, languageFor } from "@/lib/i18n";
+import { planToSpeech } from "@/lib/speech";
 import * as storage from "@/lib/storage";
+import { applyTexts, collectTexts, interfaceTextCount, type Translation } from "@/lib/translation";
 import type { PlanResult, Sample } from "@/lib/types";
 
 type View = "plan" | "checkin" | "progress";
-
-const TABS: { view: View; label: string }[] = [
-  { view: "plan", label: "Your plan" },
-  { view: "checkin", label: "Daily check-in" },
-  { view: "progress", label: "Progress" },
-];
 
 export default function Home() {
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -27,6 +25,10 @@ export default function Home() {
   const [view, setView] = useState<View>("plan");
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(true);
+  const [languageCode, setLanguageCode] = useState("en");
+  const [translation, setTranslation] = useState<Translation | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -38,6 +40,10 @@ export default function Home() {
       if (stored) {
         setResult(stored.result);
         setCheckIns(stored.checkIns);
+        if (stored.language && stored.translation) {
+          setLanguageCode(stored.language);
+          setTranslation(stored.translation);
+        }
       }
     });
     fetchSamples()
@@ -53,6 +59,8 @@ export default function Home() {
       setResult(plan);
       setCheckIns([]);
       setView("plan");
+      setLanguageCode("en");
+      setTranslation(null);
       setSaved(storage.save({ result: plan, checkIns: [] }));
       topRef.current?.scrollIntoView({ block: "start" });
     } catch (caught) {
@@ -62,12 +70,63 @@ export default function Home() {
     }
   };
 
+  const ui = translation?.ui ?? EN;
+  const language = languageFor(languageCode);
+  const persist = (next: Partial<storage.Saved>) => {
+    if (!result) return;
+    const english = languageCode === "en";
+    setSaved(
+      storage.save({
+        result,
+        checkIns,
+        ...(english ? {} : { language: languageCode, translation: translation ?? undefined }),
+        ...next,
+      }),
+    );
+  };
+
+  const chooseLanguage = async (code: string) => {
+    if (!result) return;
+    setTranslateError(null);
+    if (code === "en") {
+      setLanguageCode("en");
+      setTranslation(null);
+      setSaved(storage.save({ result, checkIns }));
+      return;
+    }
+    setTranslating(true);
+    try {
+      // Interface labels and plan text go separately (and in parallel): the
+      // server may cache the labels, but never the patient's plan.
+      const texts = collectTexts(result.plan);
+      const split = interfaceTextCount();
+      const [labels, planText] = await Promise.all([
+        translateTexts(code, texts.slice(0, split), true),
+        translateTexts(code, texts.slice(split)),
+      ]);
+      const next = applyTexts(
+        result.plan,
+        [...labels.texts, ...planText.texts],
+        labels.kept_english.length + planText.kept_english.length,
+      );
+      setLanguageCode(code);
+      setTranslation(next);
+      setSaved(storage.save({ result, checkIns, language: code, translation: next }));
+    } catch (caught) {
+      setTranslateError(caught instanceof Error ? caught.message : "The translation didn't work. Please try again.");
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const startOver = () => {
-    if (!window.confirm("Start over? This deletes your plan and check-ins from this device.")) return;
+    if (!window.confirm(ui.startOverConfirm)) return;
     storage.clear();
     setResult(null);
     setCheckIns([]);
     setError(null);
+    setLanguageCode("en");
+    setTranslation(null);
   };
 
   const saveCheckIn = (checkIn: CheckIn) => {
@@ -75,10 +134,16 @@ export default function Home() {
     const next = upsert(checkIns, checkIn);
     setCheckIns(next);
     setEditing(false);
-    setSaved(storage.save({ result, checkIns: next }));
+    persist({ checkIns: next });
   };
 
   const todays = checkIns.find((checkIn) => checkIn.date === today());
+  const shownPlan = translation?.plan ?? result?.plan;
+  const tabs: { view: View; label: string }[] = [
+    { view: "plan", label: ui.tabPlan },
+    { view: "checkin", label: ui.tabCheckin },
+    { view: "progress", label: ui.tabProgress },
+  ];
 
   return (
     <div ref={topRef} className="page">
@@ -93,10 +158,42 @@ export default function Home() {
       </header>
 
       <main id="main">
-        {result ? (
-          <>
+        {result && shownPlan ? (
+          <div lang={language.code} dir={language.dir}>
+            <div className="language-bar no-print">
+              <label htmlFor="language">{ui.language}</label>
+              <select
+                id="language"
+                value={languageCode}
+                disabled={translating}
+                onChange={(event) => chooseLanguage(event.target.value)}
+              >
+                {LANGUAGES.map((option) => (
+                  <option key={option.code} value={option.code} lang={option.code}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              {translating && (
+                <span className="hint" role="status">
+                  {ui.translating}
+                </span>
+              )}
+            </div>
+            {translateError && (
+              <p className="error" role="alert">
+                {translateError}
+              </p>
+            )}
+            {translation && (
+              <p className="translated-notice">
+                {ui.translatedNotice}
+                {translation.keptEnglish > 0 && ` ${ui.keptEnglish}`}
+              </p>
+            )}
+
             <nav className="tabs no-print" aria-label="Care plan sections">
-              {TABS.map((tab) => (
+              {tabs.map((tab) => (
                 <button
                   key={tab.view}
                   type="button"
@@ -109,33 +206,35 @@ export default function Home() {
             </nav>
 
             {view === "plan" && (
-              <CarePlanView plan={result.plan} dropped={result.dropped} onStartOver={startOver} />
+              <CarePlanView
+                plan={shownPlan}
+                dropped={result.dropped}
+                onStartOver={startOver}
+                ui={ui}
+                tools={<ReadAloud lines={planToSpeech(shownPlan, ui)} language={language} ui={ui} />}
+              />
             )}
 
             {view === "checkin" && (
               <section className="plan-section">
-                <h1>How are you today?</h1>
+                <h1>{ui.checkinTitle}</h1>
                 {todays && !editing ? (
-                  <CheckInResult plan={result.plan} checkIn={todays} onEdit={() => setEditing(true)} />
+                  <CheckInResult plan={shownPlan} checkIn={todays} onEdit={() => setEditing(true)} ui={ui} />
                 ) : (
-                  <CheckInForm plan={result.plan} existing={todays} onSave={saveCheckIn} />
+                  <CheckInForm key={languageCode} plan={shownPlan} existing={todays} onSave={saveCheckIn} ui={ui} />
                 )}
               </section>
             )}
 
             {view === "progress" && (
               <section className="plan-section">
-                <h1>Your progress</h1>
-                <ProgressLog plan={result.plan} checkIns={checkIns} />
+                <h1>{ui.progressTitle}</h1>
+                <ProgressLog plan={shownPlan} checkIns={checkIns} ui={ui} locale={language.code} />
               </section>
             )}
 
-            <p className="device-note no-print">
-              {saved
-                ? "Your plan and check-ins are saved on this device only. Nothing is stored on our servers."
-                : "This browser isn't letting us save, so your plan will be gone if you close this page."}
-            </p>
-          </>
+            <p className="device-note no-print">{saved ? ui.savedHere : ui.notSaved}</p>
+          </div>
         ) : (
           <>
             <section className="intro">

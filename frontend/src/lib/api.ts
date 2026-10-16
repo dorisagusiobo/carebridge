@@ -30,3 +30,17 @@ export async function createPlan(instructions: string): Promise<PlanResult> {
   if (!response.ok) throw new ApiError(await readError(response));
   return response.json();
 }
+
+export async function translateTexts(
+  language: string,
+  texts: string[],
+  cacheable = false,
+): Promise<{ texts: string[]; kept_english: number[] }> {
+  const response = await fetch("/api/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language, texts, cacheable }),
+  });
+  if (!response.ok) throw new ApiError(await readError(response));
+  return response.json();
+}

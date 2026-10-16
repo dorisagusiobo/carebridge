@@ -19,6 +19,7 @@ from openrouter_client import (
     OpenRouterRequestError,
 )
 from samples import SAMPLES
+from translate import LANGUAGES, TranslateRequest, TranslateResult, translate
 
 app = FastAPI(title="CareBridge")
 
@@ -51,6 +52,32 @@ def health() -> dict[str, str]:
 @app.get("/api/samples")
 def samples() -> list[dict[str, str]]:
     return [{"id": key, **value} for key, value in SAMPLES.items()]
+
+
+@app.get("/api/languages")
+def languages() -> list[dict[str, str]]:
+    return [{"code": code, "name": name} for code, name in LANGUAGES.items()]
+
+
+@app.post("/api/translate")
+def translate_texts(
+    request: TranslateRequest,
+    model: Annotated[StructuredModel, Depends(get_model)],
+) -> TranslateResult:
+    try:
+        return translate(request, model)
+    except ValueError as error:
+        raise HTTPException(
+            413, "That's too much text to translate at once."
+        ) from error
+    except OpenRouterRequestError as error:
+        raise HTTPException(
+            502, "The translation service is unavailable. Please try again."
+        ) from error
+    except PlanError as error:
+        raise HTTPException(
+            502, "The translation came back incomplete. Please try again."
+        ) from error
 
 
 @app.post("/api/plan")

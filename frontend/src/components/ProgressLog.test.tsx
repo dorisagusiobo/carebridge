@@ -16,7 +16,7 @@ describe("ProgressLog", () => {
       <ProgressLog
         plan={planResult.plan}
         checkIns={[
-          { date: "2026-10-16", meds: { Furosemide: "taken" }, symptoms: [], done: ["Weigh yourself every morning."], note: "" },
+          { date: "2026-10-16", meds: { Furosemide: "taken" }, symptoms: [], done: [0], note: "" },
         ]}
       />,
     );

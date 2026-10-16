@@ -634,3 +634,38 @@ legend {
     gap: 0;
   }
 }
+
+/* Language and translation */
+.language-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+.language-bar select {
+  font: inherit;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+}
+.translated-notice {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-size: 1rem;
+}
+[dir="rtl"] .summary {
+  border-left: 0;
+  border-right: 4px solid var(--signal);
+  border-radius: 8px 0 0 8px;
+}
+[dir="rtl"] .warning {
+  border-left-width: 0;
+  border-right: 6px solid;
+}

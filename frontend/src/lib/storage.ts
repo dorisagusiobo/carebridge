@@ -1,4 +1,5 @@
 import type { CheckIn } from "./checkin";
+import type { Translation } from "./translation";
 import type { PlanResult } from "./types";
 
 // Everything stays in this browser. Nothing is sent to or stored on a server.
@@ -7,6 +8,9 @@ const KEY = "carebridge:v1";
 export interface Saved {
   result: PlanResult;
   checkIns: CheckIn[];
+  /** The chosen language and its cached translation, if not English. */
+  language?: string;
+  translation?: Translation;
 }
 
 function isSaved(value: unknown): value is Saved {

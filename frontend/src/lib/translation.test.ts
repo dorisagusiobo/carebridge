@@ -1,0 +1,48 @@
+import { describe, expect, it } from "vitest";
+
+import { planResult } from "@/test/fixtures";
+
+import { EN } from "./i18n";
+import { applyTexts, collectTexts, interfaceTextCount } from "./translation";
+
+const plan = planResult.plan;
+
+describe("translation", () => {
+  it("collects interface and plan text but never names, doses, actions or quotes", () => {
+    const texts = collectTexts(plan);
+    expect(texts).toContain(EN.now911);
+    expect(texts).toContain(plan.reason_for_stay);
+    expect(texts).toContain("Lips turn blue");
+    expect(texts).toContain("blue or grey skin");
+    expect(texts).not.toContain("Furosemide");
+    expect(texts).not.toContain("40 mg");
+    expect(texts).not.toContain("call_911");
+    expect(texts).not.toContain("lips turning blue");
+    expect(texts.every((text) => text.trim())).toBe(true);
+  });
+
+  it("puts translations back in the same places without touching the original", () => {
+    const texts = collectTexts(plan);
+    const result = applyTexts(plan, texts.map((text) => `ES ${text}`), 1);
+
+    expect(result.ui.now911).toBe(`ES ${EN.now911}`);
+    expect(result.plan.summary).toBe(`ES ${plan.summary}`);
+    expect(result.plan.medications[0].name).toBe("Furosemide");
+    expect(result.plan.medications[0].dose).toBe("40 mg");
+    expect(result.plan.warning_signs[2].action).toBe("call_911");
+    expect(result.plan.warning_signs[2].source).toBe("lips turning blue");
+    expect(result.keptEnglish).toBe(1);
+    expect(plan.summary).not.toMatch(/^ES /);
+  });
+
+  it("puts the interface labels first, so they can be sent separately", () => {
+    const texts = collectTexts(plan);
+    const split = interfaceTextCount();
+    expect(texts.slice(0, split)).toEqual(Object.values(EN));
+    expect(texts[split]).toBe(plan.reason_for_stay);
+  });
+
+  it("rejects a translation of a different length", () => {
+    expect(() => applyTexts(plan, ["too", "short"], 0)).toThrow();
+  });
+});
