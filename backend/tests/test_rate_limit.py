@@ -1,6 +1,7 @@
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 import main
 import rate_limit
@@ -58,15 +59,47 @@ def client(monkeypatch):
 
 def test_plan_requests_are_limited_per_visitor(client):
     body = {"instructions": SAMPLES["heart-failure"]["instructions"]}
-    headers = {"x-forwarded-for": "203.0.113.7, 10.0.0.1"}
+    visitor = {"cf-connecting-ip": "203.0.113.7"}
     for _ in range(main.PLANS_PER_WINDOW):
-        assert client.post("/api/plan", json=body, headers=headers).status_code == 200
-    assert client.post("/api/plan", json=body, headers=headers).status_code == 429
+        assert client.post("/api/plan", json=body, headers=visitor).status_code == 200
+    assert client.post("/api/plan", json=body, headers=visitor).status_code == 429
+    other = {"cf-connecting-ip": "198.51.100.2"}
+    assert client.post("/api/plan", json=body, headers=other).status_code == 200
+
+
+def test_a_faked_forwarded_header_does_not_get_around_the_limit(client):
+    body = {"instructions": SAMPLES["heart-failure"]["instructions"]}
+    for _ in range(main.PLANS_PER_WINDOW):
+        client.post("/api/plan", json=body, headers={"cf-connecting-ip": "203.0.113.7"})
+    faked = {"cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.99"}
+    assert client.post("/api/plan", json=body, headers=faked).status_code == 429
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected"),
+    [
+        (
+            {"cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "1.1.1.1, 9.9.9.9"},
+            "203.0.113.7",
+        ),
+        ({"x-forwarded-for": "6.6.6.6, 203.0.113.7"}, "203.0.113.7"),
+        ({"x-forwarded-for": " 203.0.113.7 "}, "203.0.113.7"),
+        ({}, "testclient"),
+    ],
+)
+def test_visitor_id_uses_headers_the_visitor_cannot_fake(headers, expected):
+    scope = {
+        "type": "http",
+        "headers": [(k.encode(), v.encode()) for k, v in headers.items()],
+        "client": ("testclient", 123),
+    }
+    assert rate_limit.visitor_id(Request(scope)) == expected
+
+
+def test_visitor_id_without_client():
     assert (
-        client.post(
-            "/api/plan", json=body, headers={"x-forwarded-for": "198.51.100.2"}
-        ).status_code
-        == 200
+        rate_limit.visitor_id(Request({"type": "http", "headers": [], "client": None}))
+        == "unknown"
     )
 
 
