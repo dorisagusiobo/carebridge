@@ -32,17 +32,28 @@ uv run uvicorn main:app --reload
 - `GET /api/samples`: three fictional patients
 - `POST /api/plan` with `{"instructions": "..."}`: returns `{plan, dropped}`
 
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:3000, proxies /api to the backend on :8000
+```
+
+The plan view groups warning signs by urgency (911, emergency room, call your care team), labels new, changed and stopped medicines, can show the quote behind every line, prints cleanly, and turns gaps into questions to copy. Body text uses Atkinson Hyperlegible, a typeface designed by the Braille Institute for readers with low vision.
+
 ## Tests
 
 ```bash
 uv run pytest            # fast tests with a stand-in model, 100% coverage
 uv run pytest -m live    # the three sample patients against the real model
+cd ../frontend && npm test   # component and page tests
 ```
 
 ## Status
 
 - [x] Day 1: instructions → structured, grounded care plan
-- [ ] Day 2: plain-language plan view
+- [x] Day 2: plain-language plan view
 - [ ] Day 3: warning-sign rules and escalation
 - [ ] Day 4: daily check-in and progress log
 - [ ] Day 5: read aloud and translation

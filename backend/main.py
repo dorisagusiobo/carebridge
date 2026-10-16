@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from care_plan import (
@@ -66,3 +68,10 @@ def plan(
         raise HTTPException(
             502, "The plan came back incomplete. Please try again."
         ) from error
+
+
+# The exported frontend (frontend/out) is copied here in the Docker image.
+# Mounted last so the /api routes above take priority.
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.is_dir():  # pragma: no cover - only present in the built image
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
