@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
@@ -18,10 +18,40 @@ from openrouter_client import (
     OpenRouterConfigurationError,
     OpenRouterRequestError,
 )
+from rate_limit import RateLimiter, visitor_id
 from samples import SAMPLES
 from translate import LANGUAGES, TranslateRequest, TranslateResult, translate
 
-app = FastAPI(title="CareBridge")
+app = FastAPI(title="CareBridge", docs_url=None, redoc_url=None, openapi_url=None)
+limiter = RateLimiter()
+
+PLANS_PER_WINDOW = 6
+TRANSLATIONS_PER_WINDOW = 20
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.update(SECURITY_HEADERS)
+    if request.url.path.startswith("/api/"):
+        # Plans can contain health information: never cache API responses.
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def limit_plans(request: Request) -> None:
+    limiter.check(visitor_id(request), "plan", PLANS_PER_WINDOW)
+
+
+def limit_translations(request: Request) -> None:
+    limiter.check(visitor_id(request), "translate", TRANSLATIONS_PER_WINDOW)
 
 
 class PlanRequest(BaseModel):
@@ -59,7 +89,7 @@ def languages() -> list[dict[str, str]]:
     return [{"code": code, "name": name} for code, name in LANGUAGES.items()]
 
 
-@app.post("/api/translate")
+@app.post("/api/translate", dependencies=[Depends(limit_translations)])
 def translate_texts(
     request: TranslateRequest,
     model: Annotated[StructuredModel, Depends(get_model)],
@@ -80,7 +110,7 @@ def translate_texts(
         ) from error
 
 
-@app.post("/api/plan")
+@app.post("/api/plan", dependencies=[Depends(limit_plans)])
 def plan(
     request: PlanRequest,
     model: Annotated[StructuredModel, Depends(get_model)],

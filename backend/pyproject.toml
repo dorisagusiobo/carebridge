@@ -25,6 +25,7 @@ addopts = [
   "--cov=care_plan",
   "--cov=red_flags",
   "--cov=translate",
+  "--cov=rate_limit",
   "--cov-branch",
   "--cov-report=term-missing",
   "--cov-fail-under=90",

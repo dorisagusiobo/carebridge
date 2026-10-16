@@ -1,0 +1,16 @@
+# Render Blueprint for the public CareBridge demo: https://render.com/docs/blueprint-spec
+# In Render, choose New > Blueprint, connect this repo, and paste your
+# OPENROUTER_API_KEY when prompted. Everything else is configured here.
+#
+# Free plan: the service sleeps when idle and takes a little while to wake.
+# Nothing is stored on the server, so there's no database to lose.
+services:
+  - type: web
+    name: carebridge
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false

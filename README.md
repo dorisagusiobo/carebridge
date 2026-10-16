@@ -58,6 +58,20 @@ The plan, the check-in and every label can be shown in English, Spanish, Simplif
 - Interface labels are cached on the server; plan text is never kept there.
 - Read aloud uses the browser's own voices in the chosen language, and says when the device has no voice for it.
 
+## Deploy
+
+```bash
+docker build -t carebridge .
+docker run --env-file .env -p 8000:8000 carebridge   # http://localhost:8000
+```
+
+On Render: **New > Blueprint**, connect this repo and paste `OPENROUTER_API_KEY` when asked. `render.yaml` sets up a free web service with a health check.
+
+For a public demo:
+- Each visitor gets 6 plans and 20 translations per 10 minutes, and the whole demo is capped at 300 AI calls a day (in memory, best effort). Set a credit limit on the OpenRouter key as the hard backstop.
+- Nothing is stored on the server, request lines aren't logged, and API responses are sent with `Cache-Control: no-store`.
+- Security headers are set on every response, the API docs are turned off, and the container runs as an unprivileged user.
+
 ## Tests
 
 ```bash
@@ -73,6 +87,7 @@ cd ../frontend && npm test   # component and page tests
 - [x] Day 3: warning-sign rules and escalation
 - [x] Day 4: daily check-in and progress log
 - [x] Day 5: read aloud and translation
-- [ ] Day 6–7: deploy, notices, case study
+- [x] Day 6: Docker image, Render blueprint, limits and security headers
+- [ ] Day 7: deploy, case study
 
 Model: `anthropic/claude-haiku-5.5` through OpenRouter (set `OPENROUTER_MODEL` to change it).
