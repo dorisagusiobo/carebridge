@@ -1,14 +1,18 @@
 import { formatDate, medsToCheck, type CheckIn } from "@/lib/checkin";
+import { EN, fill, type UI } from "@/lib/i18n";
 import type { CarePlan } from "@/lib/types";
 
 interface Props {
   plan: CarePlan;
   checkIns: CheckIn[];
+  ui?: UI;
+  /** BCP 47 tag for formatting dates. */
+  locale?: string;
 }
 
-export default function ProgressLog({ plan, checkIns }: Props) {
+export default function ProgressLog({ plan, checkIns, ui = EN, locale }: Props) {
   if (checkIns.length === 0) {
-    return <p className="hint">No check-ins yet. Your daily check-ins will show up here.</p>;
+    return <p className="hint">{ui.noCheckins}</p>;
   }
 
   const total = medsToCheck(plan).length;
@@ -17,35 +21,32 @@ export default function ProgressLog({ plan, checkIns }: Props) {
     <ol className="log">
       {checkIns.map((checkIn) => {
         const taken = Object.values(checkIn.meds).filter((status) => status === "taken").length;
+        const symptoms = checkIn.symptoms.map((index) => plan.warning_signs[index]?.sign).filter(Boolean);
         return (
           <li key={checkIn.date} className="log-day">
-            <h3>{formatDate(checkIn.date)}</h3>
+            <h3>{formatDate(checkIn.date, locale)}</h3>
             <dl>
               {total > 0 && (
                 <div>
-                  <dt>Medicines</dt>
-                  <dd>
-                    {taken} of {total} taken
-                  </dd>
+                  <dt>{ui.logMedicines}</dt>
+                  <dd>{fill(ui.logTaken, { taken, total })}</dd>
                 </div>
               )}
               <div>
-                <dt>Warning signs</dt>
-                <dd className={checkIn.symptoms.length ? "log-symptoms" : undefined}>
-                  {checkIn.symptoms.length ? checkIn.symptoms.join(", ") : "None"}
+                <dt>{ui.logWarnings}</dt>
+                <dd className={symptoms.length ? "log-symptoms" : undefined}>
+                  {symptoms.length ? symptoms.join(", ") : ui.logNone}
                 </dd>
               </div>
               {plan.self_care.length > 0 && (
                 <div>
-                  <dt>Self-care</dt>
-                  <dd>
-                    {checkIn.done.length} of {plan.self_care.length} done
-                  </dd>
+                  <dt>{ui.logSelfCare}</dt>
+                  <dd>{fill(ui.logDone, { done: checkIn.done.length, total: plan.self_care.length })}</dd>
                 </div>
               )}
               {checkIn.note && (
                 <div>
-                  <dt>Note</dt>
+                  <dt>{ui.logNote}</dt>
                   <dd>{checkIn.note}</dd>
                 </div>
               )}

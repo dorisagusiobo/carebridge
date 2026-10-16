@@ -7,10 +7,11 @@ export interface CheckIn {
   date: string;
   /** Medicine name → whether today's doses were taken. */
   meds: Record<string, DoseStatus>;
-  /** Warning signs (by `sign`) the patient has today. */
-  symptoms: string[];
-  /** Self-care steps (by `text`) done today. */
-  done: string[];
+  /** Indexes into plan.warning_signs the patient has today. Stored by position
+   * rather than wording so check-ins still match after switching language. */
+  symptoms: number[];
+  /** Indexes into plan.self_care done today. */
+  done: number[];
   note: string;
 }
 
@@ -28,7 +29,7 @@ export function medsToCheck(plan: CarePlan): Medication[] {
 
 /** Warning signs the patient reported, grouped by what to do, most urgent first. */
 export function urgentFindings(plan: CarePlan, checkIn: CheckIn): { action: Action; signs: WarningSign[] }[] {
-  const reported = plan.warning_signs.filter((sign) => checkIn.symptoms.includes(sign.sign));
+  const reported = plan.warning_signs.filter((_, index) => checkIn.symptoms.includes(index));
   const actions = [...new Set(reported.map((sign) => sign.action))].sort((a, b) => ACTION_RANK[b] - ACTION_RANK[a]);
   return actions.map((action) => ({ action, signs: reported.filter((sign) => sign.action === action) }));
 }
@@ -44,9 +45,9 @@ export function upsert(checkIns: CheckIn[], checkIn: CheckIn): CheckIn[] {
   return [checkIn, ...checkIns.filter((c) => c.date !== checkIn.date)].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export function formatDate(date: string): string {
+export function formatDate(date: string, locale?: string): string {
   const [year, month, day] = date.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+  return new Date(year, month - 1, day).toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",

@@ -3,22 +3,24 @@
 import { useState } from "react";
 
 import { medsToCheck, today, type CheckIn, type DoseStatus } from "@/lib/checkin";
+import { EN, type UI } from "@/lib/i18n";
 import type { CarePlan } from "@/lib/types";
 
 interface Props {
   plan: CarePlan;
   existing?: CheckIn;
   onSave: (checkIn: CheckIn) => void;
+  ui?: UI;
 }
 
-function toggle(list: string[], item: string, on: boolean): string[] {
+function toggle(list: number[], item: number, on: boolean): number[] {
   return on ? [...list, item] : list.filter((value) => value !== item);
 }
 
-export default function CheckInForm({ plan, existing, onSave }: Props) {
+export default function CheckInForm({ plan, existing, onSave, ui = EN }: Props) {
   const [meds, setMeds] = useState<Record<string, DoseStatus>>(existing?.meds ?? {});
-  const [symptoms, setSymptoms] = useState<string[]>(existing?.symptoms ?? []);
-  const [done, setDone] = useState<string[]>(existing?.done ?? []);
+  const [symptoms, setSymptoms] = useState<number[]>(existing?.symptoms ?? []);
+  const [done, setDone] = useState<number[]>(existing?.done ?? []);
   const [note, setNote] = useState(existing?.note ?? "");
   const medications = medsToCheck(plan);
 
@@ -32,14 +34,14 @@ export default function CheckInForm({ plan, existing, onSave }: Props) {
     >
       {plan.warning_signs.length > 0 && (
         <fieldset>
-          <legend>Do you have any of these today?</legend>
-          <p className="hint">Tick anything you have right now.</p>
-          {plan.warning_signs.map((sign) => (
-            <label key={sign.sign} className="check">
+          <legend>{ui.anyToday}</legend>
+          <p className="hint">{ui.tickHint}</p>
+          {plan.warning_signs.map((sign, index) => (
+            <label key={sign.sign + sign.source} className="check">
               <input
                 type="checkbox"
-                checked={symptoms.includes(sign.sign)}
-                onChange={(e) => setSymptoms(toggle(symptoms, sign.sign, e.target.checked))}
+                checked={symptoms.includes(index)}
+                onChange={(e) => setSymptoms(toggle(symptoms, index, e.target.checked))}
               />
               {sign.sign}
             </label>
@@ -49,7 +51,7 @@ export default function CheckInForm({ plan, existing, onSave }: Props) {
 
       {medications.length > 0 && (
         <fieldset>
-          <legend>Your medicines today</legend>
+          <legend>{ui.medsToday}</legend>
           {medications.map((med) => (
             <div key={med.name} className="dose" role="radiogroup" aria-label={med.name}>
               <span className="dose-name">
@@ -65,7 +67,7 @@ export default function CheckInForm({ plan, existing, onSave }: Props) {
                       checked={meds[med.name] === status}
                       onChange={() => setMeds({ ...meds, [med.name]: status })}
                     />
-                    {status === "taken" ? "Taken" : "Missed"}
+                    {status === "taken" ? ui.taken : ui.missed}
                   </label>
                 ))}
               </span>
@@ -76,13 +78,13 @@ export default function CheckInForm({ plan, existing, onSave }: Props) {
 
       {plan.self_care.length > 0 && (
         <fieldset>
-          <legend>Taking care of yourself</legend>
-          {plan.self_care.map((item) => (
-            <label key={item.text} className="check">
+          <legend>{ui.selfCare}</legend>
+          {plan.self_care.map((item, index) => (
+            <label key={item.text + item.source} className="check">
               <input
                 type="checkbox"
-                checked={done.includes(item.text)}
-                onChange={(e) => setDone(toggle(done, item.text, e.target.checked))}
+                checked={done.includes(index)}
+                onChange={(e) => setDone(toggle(done, index, e.target.checked))}
               />
               {item.text}
             </label>
@@ -91,7 +93,7 @@ export default function CheckInForm({ plan, existing, onSave }: Props) {
       )}
 
       <label className="intake-label" htmlFor="note">
-        Anything else to note? <span className="hint">(optional)</span>
+        {ui.noteLabel} <span className="hint">{ui.optional}</span>
       </label>
       <textarea
         id="note"
@@ -99,11 +101,11 @@ export default function CheckInForm({ plan, existing, onSave }: Props) {
         maxLength={500}
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="For example: weight this morning, how you slept"
+        placeholder={ui.notePlaceholder}
       />
 
       <button type="submit" className="button">
-        Save today&apos;s check-in
+        {ui.saveCheckin}
       </button>
     </form>
   );

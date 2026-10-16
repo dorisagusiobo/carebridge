@@ -32,6 +32,7 @@ uv run uvicorn main:app --reload
 - `GET /api/health`
 - `GET /api/samples`: three fictional patients
 - `POST /api/plan` with `{"instructions": "..."}`: returns `{plan, dropped}`
+- `GET /api/languages`, `POST /api/translate` with `{language, texts, cacheable}`
 
 ### Frontend
 
@@ -47,6 +48,16 @@ The plan view groups warning signs by urgency (911, emergency room, call your ca
 
 Questions come straight from the plan (no AI): which warning signs you have today, whether you took each medicine, and which self-care steps you did. Reporting a warning sign shows what to do right away, using the plan's checked action (so blue lips means "Call 911 now" even if the paperwork said "seek care"). A missed dose never gets dosing advice, only "ask your care team or pharmacist". The plan and check-ins are saved in the browser only; nothing is stored on a server, and Start over deletes them.
 
+### Translation and read aloud
+
+The plan, the check-in and every label can be shown in English, Spanish, Simplified Chinese, Vietnamese, Tagalog, Arabic (right to left), Korean, Russian, Haitian Creole, Portuguese or French, the languages most often spoken by U.S. residents with limited English.
+
+- Translation runs after grounding and the red-flag rules, on display text only. Medicine names, doses, actions and source quotes are never sent.
+- Each translated line must keep the same numbers (doses, days, phone numbers) and placeholders as the English. Any line that doesn't stays in English, and the page says so.
+- Translated plans carry a notice that the translation is by AI and suggest asking for a free medical interpreter.
+- Interface labels are cached on the server; plan text is never kept there.
+- Read aloud uses the browser's own voices in the chosen language, and says when the device has no voice for it.
+
 ## Tests
 
 ```bash
@@ -61,7 +72,7 @@ cd ../frontend && npm test   # component and page tests
 - [x] Day 2: plain-language plan view
 - [x] Day 3: warning-sign rules and escalation
 - [x] Day 4: daily check-in and progress log
-- [ ] Day 5: read aloud and translation
+- [x] Day 5: read aloud and translation
 - [ ] Day 6–7: deploy, notices, case study
 
 Model: `anthropic/claude-haiku-5.5` through OpenRouter (set `OPENROUTER_MODEL` to change it).

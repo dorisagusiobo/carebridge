@@ -1,49 +1,41 @@
 import { missedMeds, urgentFindings, type CheckIn } from "@/lib/checkin";
-import type { Action, CarePlan } from "@/lib/types";
+import { EN, fill, type UI } from "@/lib/i18n";
+import { ACTION_TONE, doNow } from "@/lib/labels";
+import type { CarePlan } from "@/lib/types";
 
-// What to do now, decided by the plan's checked actions (instructions plus the
-// red-flag rules), never by the model.
-const DO_NOW: Record<Action, { text: string; tone: string }> = {
-  call_911: { text: "Call 911 now.", tone: "urgent" },
-  go_to_er: { text: "Go to the emergency room now.", tone: "er" },
-  call_care_team: { text: "Call your doctor or care team today.", tone: "call" },
-  not_stated: { text: "Call your care team and ask what to do.", tone: "ask" },
-};
+// What to do now comes from the plan's checked actions (instructions plus the
+// red-flag rules), never from the model.
 
 interface Props {
   plan: CarePlan;
   checkIn: CheckIn;
   onEdit: () => void;
+  ui?: UI;
 }
 
-export default function CheckInResult({ plan, checkIn, onEdit }: Props) {
+export default function CheckInResult({ plan, checkIn, onEdit, ui = EN }: Props) {
   const findings = urgentFindings(plan, checkIn);
   const missed = missedMeds(checkIn);
 
   return (
     <div className="checkin-result">
       {findings.map(({ action, signs }) => (
-        <div key={action} className={`warning warning-${DO_NOW[action].tone}`} role="alert">
-          <h3>{DO_NOW[action].text}</h3>
-          <p>You said you have: {signs.map((sign) => sign.sign.toLowerCase()).join(", ")}.</p>
+        <div key={action} className={`warning warning-${ACTION_TONE[action]}`} role="alert">
+          <h3>{doNow(action, ui)}</h3>
+          <p>{fill(ui.youHave, { signs: signs.map((sign) => sign.sign.toLowerCase()).join(", ") })}</p>
         </div>
       ))}
 
-      {missed.length > 0 && (
-        <p className="notice">
-          You missed {missed.join(", ")}. Don&apos;t take extra to catch up unless your care team says to. Ask your
-          care team or pharmacist what to do.
-        </p>
-      )}
+      {missed.length > 0 && <p className="notice">{fill(ui.missedNotice, { meds: missed.join(", ") })}</p>}
 
       {findings.length === 0 && (
         <p className="saved" role="status">
-          Saved. Nothing you reported needs a call right now. Check in again tomorrow.
+          {ui.savedOk}
         </p>
       )}
 
       <button type="button" className="button-secondary" onClick={onEdit}>
-        Change today&apos;s answers
+        {ui.changeAnswers}
       </button>
     </div>
   );

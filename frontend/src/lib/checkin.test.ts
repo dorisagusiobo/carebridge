@@ -17,13 +17,13 @@ describe("check-in logic", () => {
   });
 
   it("groups reported signs by action, most urgent first", () => {
-    const findings = urgentFindings(plan, { ...base, symptoms: ["Dizziness", "Lips turn blue", "Chest pain"] });
+    const findings = urgentFindings(plan, { ...base, symptoms: [0, 2, 1] });
     expect(findings.map((f) => f.action)).toEqual(["call_911", "call_care_team"]);
     expect(findings[0].signs.map((s) => s.sign)).toEqual(["Chest pain", "Lips turn blue"]);
   });
 
   it("uses the escalated action, not the instructed one", () => {
-    const [finding] = urgentFindings(plan, { ...base, symptoms: ["Lips turn blue"] });
+    const [finding] = urgentFindings(plan, { ...base, symptoms: [2] });
     expect(finding.action).toBe("call_911");
   });
 
