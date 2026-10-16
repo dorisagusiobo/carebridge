@@ -1,15 +1,18 @@
+/* "Harbor": CareBridge's own palette. Calm harbor blue and navy ink, with a
+   violet highlight, chosen so nothing competes with the red, orange and amber
+   used for warning signs. Every text pair passes WCAG AA in light and dark. */
 :root {
-  --bg: #f7f9f8;
+  --bg: #f6f8fc;
   --surface: #ffffff;
-  --surface-soft: #eef2f0;
-  --fg: #16211f;
-  --muted: #4f5d59;
-  --line: #d3ddd9;
-  --accent: #1f5c4f;
-  --accent-strong: #174a3f;
-  --accent-soft: #e1ede8;
-  --on-accent: #f7f9f8;
-  --signal: #e0a33a;
+  --surface-soft: #edf1f8;
+  --fg: #172033;
+  --muted: #4b5670;
+  --line: #d5dcea;
+  --accent: #2453a6;
+  --accent-strong: #1b3f82;
+  --accent-soft: #e3ebfa;
+  --on-accent: #ffffff;
+  --signal: #6d4ae0;
 
   --urgent: #a3261b;
   --urgent-soft: #fbe9e7;
@@ -26,16 +29,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111917;
-    --surface: #18221f;
-    --surface-soft: #1c2925;
-    --fg: #e8eeeb;
-    --muted: #a3b3ad;
-    --line: #2d3c37;
-    --accent: #6fbfa9;
-    --accent-strong: #8fd3c0;
-    --accent-soft: #1d2f2a;
-    --on-accent: #10201b;
+    --bg: #0f1522;
+    --surface: #161e2e;
+    --surface-soft: #1b2537;
+    --fg: #e7ecf5;
+    --muted: #a5b0c4;
+    --line: #2a3548;
+    --accent: #8db2f5;
+    --accent-strong: #b0cafa;
+    --accent-soft: #1c2a44;
+    --on-accent: #0f1522;
+    --signal: #b9a6ff;
 
     --urgent: #ff9a8c;
     --urgent-soft: #3a1a17;

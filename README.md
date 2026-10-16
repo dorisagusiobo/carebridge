@@ -42,7 +42,7 @@ npm install
 npm run dev        # http://localhost:3000, proxies /api to the backend on :8000
 ```
 
-The plan view groups warning signs by urgency (911, emergency room, call your care team), labels new, changed and stopped medicines, can show the quote behind every line, prints cleanly, and turns gaps into questions to copy. Body text uses Atkinson Hyperlegible, a typeface designed by the Braille Institute for readers with low vision.
+CareBridge has its own "Harbor" palette (harbor blue, navy ink and a violet highlight), chosen so nothing competes with the red, orange and amber used for warning signs; every text pair passes WCAG AA in light and dark mode. The plan view groups warning signs by urgency (911, emergency room, call your care team), labels new, changed and stopped medicines, can show the quote behind every line, prints cleanly, and turns gaps into questions to copy. Body text uses Atkinson Hyperlegible, a typeface designed by the Braille Institute for readers with low vision.
 
 ### Daily check-in
 
