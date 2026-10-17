@@ -2,6 +2,8 @@
 
 Turns hospital discharge instructions into a plain-language care plan a patient can follow at home.
 
+**[Try the live demo](https://carebridge-ojwt.onrender.com)** · **[Read the case study](https://doris-agusiobo-echianu.vercel.app/work/carebridge)**
+
 > CareBridge explains instructions. It doesn't diagnose, and it doesn't replace the care team. The demo uses fictional patients only.
 
 ## The problem
@@ -88,6 +90,6 @@ cd ../frontend && npm test   # component and page tests
 - [x] Day 4: daily check-in and progress log
 - [x] Day 5: read aloud and translation
 - [x] Day 6: Docker image, Render blueprint, limits and security headers
-- [ ] Day 7: deploy, case study
+- [x] Day 7: deployed on Render, case study published
 
 Model: `anthropic/claude-haiku-5.5` through OpenRouter (set `OPENROUTER_MODEL` to change it).
