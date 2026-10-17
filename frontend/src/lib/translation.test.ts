@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { planResult } from "@/test/fixtures";
 
 import { EN } from "./i18n";
-import { applyTexts, collectTexts, interfaceTextCount } from "./translation";
+import { applyInterface, applyTexts, collectTexts, interfaceTextCount, interfaceTexts } from "./translation";
 
 const plan = planResult.plan;
 
@@ -42,6 +42,13 @@ describe("translation", () => {
     const split = interfaceTextCount();
     expect(texts.slice(0, split)).toEqual(Object.values(EN));
     expect(texts[split]).toBe(plan.reason_for_stay);
+  });
+
+  it("translates the interface on its own, before there's a plan", () => {
+    const ui = applyInterface(interfaceTexts().map((text) => `ES ${text}`));
+    expect(ui.introTitle).toBe(`ES ${EN.introTitle}`);
+    expect(ui.now911).toBe(`ES ${EN.now911}`);
+    expect(() => applyInterface(["too short"])).toThrow();
   });
 
   it("rejects a translation of a different length", () => {

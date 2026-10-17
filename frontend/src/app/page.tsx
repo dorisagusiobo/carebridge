@@ -6,17 +6,50 @@ import CarePlanView from "@/components/CarePlanView";
 import CheckInForm from "@/components/CheckInForm";
 import CheckInResult from "@/components/CheckInResult";
 import InstructionsForm from "@/components/InstructionsForm";
+import LanguageBar from "@/components/LanguageBar";
 import ProgressLog from "@/components/ProgressLog";
 import ReadAloud from "@/components/ReadAloud";
 import { createPlan, fetchSamples, translateTexts } from "@/lib/api";
 import { today, upsert, type CheckIn } from "@/lib/checkin";
-import { EN, LANGUAGES, languageFor } from "@/lib/i18n";
+import { EN, languageFor, type UI } from "@/lib/i18n";
 import { planToSpeech } from "@/lib/speech";
 import * as storage from "@/lib/storage";
-import { applyTexts, collectTexts, interfaceTextCount, type Translation } from "@/lib/translation";
+import { applyInterface, applyTexts, collectTexts, interfaceTexts, type Translation } from "@/lib/translation";
 import type { PlanResult, Sample } from "@/lib/types";
 
 type View = "plan" | "checkin" | "progress";
+
+interface Translated {
+  labels: UI;
+  sampleTitles: Record<string, string>;
+  translation: Translation | null;
+}
+
+/** Translate the interface (and sample titles), plus the plan if there is one.
+ * Interface text is public and sent as cacheable; plan text never is. */
+async function translateAll(code: string, plan: PlanResult | null, samples: Sample[]): Promise<Translated> {
+  const labels = interfaceTexts();
+  const titles = samples.map((sample) => sample.title);
+  const planTexts = plan ? collectTexts(plan.plan).slice(labels.length) : [];
+
+  const [shared, planPart] = await Promise.all([
+    translateTexts(code, [...labels, ...titles], true),
+    planTexts.length ? translateTexts(code, planTexts) : Promise.resolve({ texts: [], kept_english: [] }),
+  ]);
+
+  const translatedLabels = shared.texts.slice(0, labels.length);
+  const sampleTitles = Object.fromEntries(
+    samples.map((sample, index) => [sample.id, shared.texts[labels.length + index]]),
+  );
+  const translation = plan
+    ? applyTexts(
+        plan.plan,
+        [...translatedLabels, ...planPart.texts],
+        shared.kept_english.filter((index) => index < labels.length).length + planPart.kept_english.length,
+      )
+    : null;
+  return { labels: applyInterface(translatedLabels), sampleTitles, translation };
+}
 
 export default function Home() {
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -26,6 +59,8 @@ export default function Home() {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(true);
   const [languageCode, setLanguageCode] = useState("en");
+  const [labels, setLabels] = useState<UI | null>(null);
+  const [sampleTitles, setSampleTitles] = useState<Record<string, string>>({});
   const [translation, setTranslation] = useState<Translation | null>(null);
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
@@ -33,22 +68,57 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
+  const applyLanguage = async (code: string, plan: PlanResult | null, sampleList: Sample[], entries: CheckIn[]) => {
+    setTranslateError(null);
+    storage.saveLanguage(code);
+    if (code === "en") {
+      setLanguageCode("en");
+      setLabels(null);
+      setSampleTitles({});
+      setTranslation(null);
+      if (plan) setSaved(storage.save({ result: plan, checkIns: entries }));
+      return;
+    }
+    setTranslating(true);
+    try {
+      const next = await translateAll(code, plan, sampleList);
+      setLanguageCode(code);
+      setLabels(next.labels);
+      setSampleTitles(next.sampleTitles);
+      setTranslation(next.translation);
+      if (plan && next.translation) {
+        setSaved(storage.save({ result: plan, checkIns: entries, language: code, translation: next.translation }));
+      }
+    } catch (caught) {
+      setTranslateError(caught instanceof Error ? caught.message : "The translation didn't work. Please try again.");
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   useEffect(() => {
-    // Pick up a plan saved on this device. Loaded after mount because the page
-    // is pre-rendered without access to the browser's storage.
-    Promise.resolve(storage.load()).then((stored) => {
+    // Pick up a plan or language saved on this device. Loaded after mount
+    // because the page is pre-rendered without access to the browser's storage.
+    const stored = storage.load();
+    const preferred = storage.loadLanguage();
+    Promise.resolve().then(() => {
       if (stored) {
         setResult(stored.result);
         setCheckIns(stored.checkIns);
         if (stored.language && stored.translation) {
           setLanguageCode(stored.language);
           setTranslation(stored.translation);
+          setLabels(stored.translation.ui);
         }
       }
     });
     fetchSamples()
-      .then(setSamples)
-      .catch(() => setSamples([]));
+      .catch(() => [] as Sample[])
+      .then((list) => {
+        setSamples(list);
+        if (!stored && preferred !== "en") applyLanguage(preferred, null, list, []);
+      });
+    // Runs once on mount; applyLanguage only uses its arguments and setters.
   }, []);
 
   const submit = async (instructions: string) => {
@@ -59,10 +129,11 @@ export default function Home() {
       setResult(plan);
       setCheckIns([]);
       setView("plan");
-      setLanguageCode("en");
       setTranslation(null);
       setSaved(storage.save({ result: plan, checkIns: [] }));
       topRef.current?.scrollIntoView({ block: "start" });
+      // A language chosen on the first screen carries over to the plan.
+      if (languageCode !== "en") await applyLanguage(languageCode, plan, samples, []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Something went wrong. Please try again.");
     } finally {
@@ -70,7 +141,7 @@ export default function Home() {
     }
   };
 
-  const ui = translation?.ui ?? EN;
+  const ui = translation?.ui ?? labels ?? EN;
   const language = languageFor(languageCode);
   const persist = (next: Partial<storage.Saved>) => {
     if (!result) return;
@@ -85,47 +156,13 @@ export default function Home() {
     );
   };
 
-  const chooseLanguage = async (code: string) => {
-    if (!result) return;
-    setTranslateError(null);
-    if (code === "en") {
-      setLanguageCode("en");
-      setTranslation(null);
-      setSaved(storage.save({ result, checkIns }));
-      return;
-    }
-    setTranslating(true);
-    try {
-      // Interface labels and plan text go separately (and in parallel): the
-      // server may cache the labels, but never the patient's plan.
-      const texts = collectTexts(result.plan);
-      const split = interfaceTextCount();
-      const [labels, planText] = await Promise.all([
-        translateTexts(code, texts.slice(0, split), true),
-        translateTexts(code, texts.slice(split)),
-      ]);
-      const next = applyTexts(
-        result.plan,
-        [...labels.texts, ...planText.texts],
-        labels.kept_english.length + planText.kept_english.length,
-      );
-      setLanguageCode(code);
-      setTranslation(next);
-      setSaved(storage.save({ result, checkIns, language: code, translation: next }));
-    } catch (caught) {
-      setTranslateError(caught instanceof Error ? caught.message : "The translation didn't work. Please try again.");
-    } finally {
-      setTranslating(false);
-    }
-  };
-
   const startOver = () => {
     if (!window.confirm(ui.startOverConfirm)) return;
     storage.clear();
     setResult(null);
     setCheckIns([]);
     setError(null);
-    setLanguageCode("en");
+    // Keep the chosen language for the first screen, without the old plan.
     setTranslation(null);
   };
 
@@ -144,6 +181,19 @@ export default function Home() {
     { view: "checkin", label: ui.tabCheckin },
     { view: "progress", label: ui.tabProgress },
   ];
+  const languageBar = (
+    <LanguageBar
+      value={languageCode}
+      translating={translating}
+      onChange={(code) => applyLanguage(code, result, samples, checkIns)}
+      ui={ui}
+    />
+  );
+  const languageError = translateError && (
+    <p className="error" role="alert">
+      {translateError}
+    </p>
+  );
 
   return (
     <div ref={topRef} className="page">
@@ -154,37 +204,16 @@ export default function Home() {
           </svg>
           CareBridge
         </button>
-        <span className="tag">Demo · fictional patients only</span>
+        <span className="tag" lang={language.code}>
+          {ui.tagDemo}
+        </span>
       </header>
 
-      <main id="main">
+      <main id="main" lang={language.code} dir={language.dir}>
         {result && shownPlan ? (
-          <div lang={language.code} dir={language.dir}>
-            <div className="language-bar no-print">
-              <label htmlFor="language">{ui.language}</label>
-              <select
-                id="language"
-                value={languageCode}
-                disabled={translating}
-                onChange={(event) => chooseLanguage(event.target.value)}
-              >
-                {LANGUAGES.map((option) => (
-                  <option key={option.code} value={option.code} lang={option.code}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-              {translating && (
-                <span className="hint" role="status">
-                  {ui.translating}
-                </span>
-              )}
-            </div>
-            {translateError && (
-              <p className="error" role="alert">
-                {translateError}
-              </p>
-            )}
+          <>
+            {languageBar}
+            {languageError}
             {translation && (
               <p className="translated-notice">
                 {ui.translatedNotice}
@@ -234,20 +263,26 @@ export default function Home() {
             )}
 
             <p className="device-note no-print">{saved ? ui.savedHere : ui.notSaved}</p>
-          </div>
+          </>
         ) : (
           <>
+            {languageBar}
+            {languageError}
+            {labels && <p className="translated-notice">{ui.introTranslated}</p>}
             <section className="intro">
-              <h1>Understand your hospital instructions</h1>
-              <p className="lede">
-                Paste the instructions you got when you left the hospital. CareBridge turns them into a clear plan:
-                what to take, what to avoid, and when to get help.
-              </p>
+              <h1>{ui.introTitle}</h1>
+              <p className="lede">{ui.introLede}</p>
             </section>
-            <InstructionsForm samples={samples} busy={busy} onSubmit={submit} />
+            <InstructionsForm
+              samples={samples}
+              busy={busy || translating}
+              onSubmit={submit}
+              ui={ui}
+              sampleTitles={sampleTitles}
+            />
             {busy && (
               <p className="status" role="status">
-                Reading your instructions. This usually takes about 10 seconds.
+                {ui.reading}
               </p>
             )}
             {error && (
@@ -255,10 +290,7 @@ export default function Home() {
                 {error}
               </p>
             )}
-            <p className="disclaimer">
-              CareBridge explains instructions in plain words. It doesn&apos;t diagnose or give medical advice, and it
-              doesn&apos;t replace your care team. In an emergency, call 911.
-            </p>
+            <p className="disclaimer">{ui.introDisclaimer}</p>
           </>
         )}
       </main>

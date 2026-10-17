@@ -3,6 +3,23 @@
 // now") appears in the patient's language. {placeholders} are kept by the
 // translator and filled in with `fill`.
 export const EN = {
+  tagDemo: "Demo · fictional patients only",
+  introTitle: "Understand your hospital instructions",
+  introLede:
+    "Paste the instructions you got when you left the hospital. CareBridge turns them into a clear plan: what to take, what to avoid, and when to get help.",
+  pasteLabel: "Paste your discharge instructions",
+  pasteHint:
+    "Copy the text from your hospital paperwork or patient portal. Leave out your name, date of birth and record numbers.",
+  pastePlaceholder: "For example: Furosemide 40 mg PO once daily in the morning…",
+  trySample: "Or try a fictional patient:",
+  makePlan: "Make my care plan",
+  makingPlan: "Making your plan…",
+  charCount: "{count} / {max} characters",
+  reading: "Reading your instructions. This usually takes about 10 seconds.",
+  introDisclaimer:
+    "CareBridge explains instructions in plain words. It doesn't diagnose or give medical advice, and it doesn't replace your care team. In an emergency, call 911.",
+  introTranslated: "Translated by AI. The plan will be in this language too.",
+
   tabPlan: "Your plan",
   tabCheckin: "Daily check-in",
   tabProgress: "Progress",

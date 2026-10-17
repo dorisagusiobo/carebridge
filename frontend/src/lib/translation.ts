@@ -40,10 +40,23 @@ function walk(plan: CarePlan, ui: UI, visit: Visit) {
   });
 }
 
-/** How many of the collected texts (at the start) are interface labels. These
- * are the same for every plan, so the server may cache their translations. */
+/** The interface labels, in the order `collectTexts` puts them first. They are
+ * the same for every plan, so the server may cache their translations. */
+export function interfaceTexts(): string[] {
+  return Object.values(EN).filter((text) => text.trim());
+}
+
 export function interfaceTextCount(): number {
-  return Object.values(EN).filter((text) => text.trim()).length;
+  return interfaceTexts().length;
+}
+
+/** The interface in another language, from translations of `interfaceTexts()`. */
+export function applyInterface(translated: string[]): UI {
+  const keys = (Object.keys(EN) as (keyof UI)[]).filter((key) => EN[key].trim());
+  if (keys.length !== translated.length) throw new Error("Translation doesn't match the interface");
+  const ui = structuredClone(EN);
+  keys.forEach((key, index) => (ui[key] = translated[index]));
+  return ui;
 }
 
 export function collectTexts(plan: CarePlan): string[] {

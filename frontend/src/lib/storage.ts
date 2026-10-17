@@ -40,6 +40,26 @@ export function save(saved: Saved): boolean {
   }
 }
 
+const LANGUAGE_KEY = "carebridge:language";
+
+/** The language chosen on this device, remembered even before there's a plan. */
+export function loadLanguage(): string {
+  try {
+    return localStorage.getItem(LANGUAGE_KEY) ?? "en";
+  } catch {
+    return "en";
+  }
+}
+
+export function saveLanguage(code: string): void {
+  try {
+    if (code === "en") localStorage.removeItem(LANGUAGE_KEY);
+    else localStorage.setItem(LANGUAGE_KEY, code);
+  } catch {
+    // Not remembering the language is fine.
+  }
+}
+
 export function clear(): void {
   try {
     localStorage.removeItem(KEY);
