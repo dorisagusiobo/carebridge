@@ -36,7 +36,8 @@ export interface WarningSign {
 
 export interface CarePlan {
   reason_for_stay: string;
-  summary: string;
+  reason_source: string;
+  key_points: Instruction[];
   medications: Medication[];
   appointments: Appointment[];
   avoid: Instruction[];

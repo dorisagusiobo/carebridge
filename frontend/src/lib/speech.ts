@@ -4,7 +4,7 @@ import type { CarePlan } from "./types";
 
 /** The plan as short paragraphs to read aloud, most important first. */
 export function planToSpeech(plan: CarePlan, ui: UI): string[] {
-  const lines: string[] = [ui.planTitle, plan.reason_for_stay, plan.summary];
+  const lines: string[] = [ui.planTitle, plan.reason_for_stay, ...plan.key_points.map((point) => point.text)];
 
   if (plan.warning_signs.length) {
     lines.push(ui.whenToGetHelp);

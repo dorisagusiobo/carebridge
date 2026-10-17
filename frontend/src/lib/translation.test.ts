@@ -26,13 +26,15 @@ describe("translation", () => {
     const result = applyTexts(plan, texts.map((text) => `ES ${text}`), 1);
 
     expect(result.ui.now911).toBe(`ES ${EN.now911}`);
-    expect(result.plan.summary).toBe(`ES ${plan.summary}`);
+    expect(result.plan.key_points[0].text).toBe(`ES ${plan.key_points[0].text}`);
+    expect(result.plan.key_points[0].source).toBe(plan.key_points[0].source);
+    expect(result.plan.reason_source).toBe(plan.reason_source);
     expect(result.plan.medications[0].name).toBe("Furosemide");
     expect(result.plan.medications[0].dose).toBe("40 mg");
     expect(result.plan.warning_signs[2].action).toBe("call_911");
     expect(result.plan.warning_signs[2].source).toBe("lips turning blue");
     expect(result.keptEnglish).toBe(1);
-    expect(plan.summary).not.toMatch(/^ES /);
+    expect(plan.key_points[0].text).not.toMatch(/^ES /);
   });
 
   it("puts the interface labels first, so they can be sent separately", () => {

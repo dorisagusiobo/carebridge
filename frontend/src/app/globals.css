@@ -281,6 +281,9 @@ textarea:focus {
   font-size: clamp(2rem, 6vw, 2.75rem);
 }
 .summary {
+  list-style: none;
+  display: grid;
+  gap: 10px;
   font-size: 1.1875rem;
   padding: 16px 20px;
   border-left: 4px solid var(--signal);

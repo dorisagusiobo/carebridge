@@ -17,6 +17,7 @@ export const EN = {
 
   eyebrow: "Your care plan",
   planTitle: "What to do at home",
+  keyPoints: "Most important",
   showSources: "Show where each line came from",
   print: "Print",
   startOver: "Start over",

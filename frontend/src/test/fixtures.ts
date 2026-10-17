@@ -3,7 +3,8 @@ import type { PlanResult } from "@/lib/types";
 export const planResult: PlanResult = {
   plan: {
     reason_for_stay: "Your heart isn't pumping as strongly as it should.",
-    summary: "Weigh yourself every morning.",
+    reason_source: "Acute on chronic systolic heart failure",
+    key_points: [{ text: "Weigh yourself every morning.", source: "Weigh yourself every morning" }],
     medications: [
       {
         name: "Furosemide",

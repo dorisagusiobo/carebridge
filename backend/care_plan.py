@@ -67,10 +67,15 @@ class WarningSign(Strict):
 
 class CarePlan(Strict):
     reason_for_stay: Text = Field(
-        description="Why the patient was in hospital, in 1-2 plain sentences with no medical jargon."
+        description="The condition the instructions name, in one short plain sentence. No causes or body processes unless the instructions give them."
     )
-    summary: Text = Field(
-        description="The 2-3 most important things to do at home, in plain words."
+    reason_source: Annotated[
+        str, StringConstraints(strip_whitespace=True, max_length=400)
+    ] = Field(
+        description="A word-for-word quote from the instructions naming the condition, or empty if they don't name one."
+    )
+    key_points: list[Instruction] = Field(
+        description="The 2-3 most important things to do at home, each with its own quote."
     )
     medications: list[Medication]
     appointments: list[Appointment]
@@ -114,7 +119,8 @@ Rules:
 - Write at about a 6th-grade reading level. Short sentences. Replace medical words with everyday ones, for example "heart failure" becomes "your heart isn't pumping as strongly as it should".
 - Translate medical shorthand: PO = by mouth, BID = twice a day, TID = three times a day, daily = once a day, q4-6h = every 4 to 6 hours, PRN = only when needed, x 5 days = for 5 days, SOB = shortness of breath, PCP = your regular doctor, F/u = follow-up, Dx = diagnosis.
 - Keep medicine names and amounts exactly as written, but never put shorthand like "PO" in the plain-language fields.
-- Always fill `reason_for_stay` and `summary` in plain words; never copy the diagnosis as written.
+- `reason_for_stay`: say in one short, plain sentence what condition the instructions name, and quote where they name it in `reason_source`. Don't explain causes, germs or what is happening in the body unless the instructions say it. If the instructions don't name a condition, leave both empty.
+- `key_points`: the 2-3 most important things to do at home, each one short and with its own quote, like every other item.
 - `when` must say how often and for how long, never just how to take it ("by mouth" alone is not enough).
 - List every medicine the instructions mention, including ones to stop (change "stop").
 - Give a medicine's `purpose` only when the instructions state it, and quote that text in `purpose_source`. Don't explain what a medicine is for from general knowledge.
@@ -262,9 +268,17 @@ def ground_plan(plan: CarePlan, instructions: str) -> PlanResult:
             )
         )
 
+    # The reason must quote where the instructions name the condition; without
+    # that, it's hidden rather than shown unchecked.
+    reason, reason_source = plan.reason_for_stay, plan.reason_source
+    if reason and not (reason_source and is_grounded(reason_source, haystack)):
+        dropped.append(f"reason for stay: {reason_source or reason}")
+        reason, reason_source = "", ""
+
     grounded = CheckedPlan(
-        reason_for_stay=plan.reason_for_stay,
-        summary=plan.summary,
+        reason_for_stay=reason,
+        reason_source=reason_source,
+        key_points=keep(plan.key_points, "key point"),
         medications=medications,
         appointments=appointments,
         avoid=avoid,

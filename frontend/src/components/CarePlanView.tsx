@@ -53,8 +53,22 @@ export default function CarePlanView({ plan, dropped, onStartOver, ui = EN, tool
       <header className="plan-header">
         <p className="eyebrow">{ui.eyebrow}</p>
         <h1 id="plan-title">{ui.planTitle}</h1>
-        <p className="lede">{plan.reason_for_stay}</p>
-        <p className="summary">{plan.summary}</p>
+        {plan.reason_for_stay && (
+          <p className="lede">
+            {plan.reason_for_stay}
+            <Source text={plan.reason_source} show={showSources} />
+          </p>
+        )}
+        {plan.key_points.length > 0 && (
+          <ul className="summary" aria-label={ui.keyPoints}>
+            {plan.key_points.map((point) => (
+              <li key={point.text + point.source}>
+                {point.text}
+                <Source text={point.source} show={showSources} />
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="plan-tools no-print">
           <label className="toggle">
             <input type="checkbox" checked={showSources} onChange={(e) => setShowSources(e.target.checked)} />

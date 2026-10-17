@@ -20,8 +20,18 @@ HEART = SAMPLES["heart-failure"]["instructions"]
 
 def plan_dict(**overrides):
     plan = {
-        "reason_for_stay": "Your heart was not pumping well, so fluid built up.",
-        "summary": "Take your water pill each morning and weigh yourself daily.",
+        "reason_for_stay": "Your heart failure got worse.",
+        "reason_source": "Acute on chronic systolic heart failure",
+        "key_points": [
+            {
+                "text": "Weigh yourself every morning.",
+                "source": "Weigh yourself every morning",
+            },
+            {
+                "text": "Take your new water pill each morning.",
+                "source": "NEW: Furosemide 40 mg PO once daily in the morning",
+            },
+        ],
         "medications": [
             {
                 "name": "Furosemide",
@@ -136,6 +146,9 @@ def test_grounding_ignores_case_spacing_and_curly_quotes():
     text = "Don’t   lift more than 10 lbs.\nCall 911 if chest pain."
     plan = CarePlan.model_validate(
         plan_dict(
+            reason_for_stay="",
+            reason_source="",
+            key_points=[],
             medications=[],
             appointments=[],
             avoid=[
@@ -370,3 +383,63 @@ def test_red_flags_raise_under_stated_warning_signs():
         "blue or grey skin",
     )
     assert (fever.action, fever.red_flag) == ("call_care_team", "")
+
+
+def test_a_grounded_reason_and_key_points_are_kept():
+    result = build_plan(HEART, FakeModel(plan_dict()))
+
+    assert result.plan.reason_for_stay == "Your heart failure got worse."
+    assert result.plan.reason_source == "Acute on chronic systolic heart failure"
+    assert [point.text for point in result.plan.key_points] == [
+        "Weigh yourself every morning.",
+        "Take your new water pill each morning.",
+    ]
+    assert result.dropped == []
+
+
+@pytest.mark.parametrize(
+    "reason_source",
+    ["", "Germs got into your lungs and made them sore"],
+)
+def test_a_reason_without_a_real_quote_is_hidden(reason_source):
+    pneumonia = SAMPLES["pneumonia"]["instructions"]
+    plan = plan_dict(
+        reason_for_stay="Germs got into your lungs and made them sore and full of fluid.",
+        reason_source=reason_source,
+        key_points=[],
+        medications=[],
+        appointments=[],
+        avoid=[],
+        self_care=[],
+        warning_signs=[],
+    )
+    result = build_plan(pneumonia, FakeModel(plan))
+
+    assert result.plan.reason_for_stay == ""
+    assert result.plan.reason_source == ""
+    assert result.dropped[0].startswith("reason for stay:")
+
+
+def test_an_empty_reason_is_fine():
+    plan = plan_dict(reason_for_stay="", reason_source="")
+    result = build_plan(HEART, FakeModel(plan))
+    assert result.plan.reason_for_stay == ""
+    assert result.dropped == []
+
+
+def test_key_points_without_a_real_quote_are_dropped():
+    plan = plan_dict(
+        key_points=[
+            {
+                "text": "Weigh yourself every morning.",
+                "source": "Weigh yourself every morning",
+            },
+            {"text": "Drink lots of water.", "source": "Drink 3 liters of water"},
+        ]
+    )
+    result = build_plan(HEART, FakeModel(plan))
+
+    assert [point.text for point in result.plan.key_points] == [
+        "Weigh yourself every morning."
+    ]
+    assert result.dropped == ["key point: Drink 3 liters of water"]
