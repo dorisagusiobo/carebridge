@@ -23,6 +23,10 @@ describe("storage", () => {
     expect(load()).toBeNull();
     localStorage.setItem("carebridge:v1", JSON.stringify({ hello: "world" }));
     expect(load()).toBeNull();
+    const oldPlan: Partial<typeof planResult.plan> = { ...planResult.plan };
+    delete oldPlan.key_points;
+    localStorage.setItem("carebridge:v1", JSON.stringify({ result: { ...planResult, plan: oldPlan }, checkIns: [] }));
+    expect(load()).toBeNull();
   });
 
   it("copes when storage is unavailable", () => {

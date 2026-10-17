@@ -52,6 +52,24 @@ describe("CarePlanView", () => {
     expect(screen.getByText("Water pill")).toBeInTheDocument();
   });
 
+  it("shows key points, and the quotes behind them and the reason when asked", async () => {
+    renderPlan();
+    const points = screen.getByRole("list", { name: "Most important" });
+    expect(within(points).getByText("Weigh yourself every morning.")).toBeInTheDocument();
+    expect(screen.queryByText("Acute on chronic systolic heart failure")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Show where each line came from"));
+
+    expect(screen.getByText("Acute on chronic systolic heart failure")).toBeInTheDocument();
+    expect(within(points).getByText("Weigh yourself every morning")).toBeInTheDocument();
+  });
+
+  it("leaves out the reason when there isn't a grounded one", () => {
+    renderPlan({ plan: { ...planResult.plan, reason_for_stay: "", reason_source: "", key_points: [] } });
+    expect(screen.queryByText(/isn't pumping/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Most important" })).not.toBeInTheDocument();
+  });
+
   it("hides source quotes until asked", async () => {
     renderPlan();
     expect(screen.queryByText("STOP: Ibuprofen.")).not.toBeInTheDocument();

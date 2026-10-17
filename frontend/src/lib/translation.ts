@@ -19,7 +19,7 @@ function walk(plan: CarePlan, ui: UI, visit: Visit) {
 
   (Object.keys(ui) as (keyof UI)[]).forEach((key) => field(ui, key));
   field(plan, "reason_for_stay");
-  field(plan, "summary");
+  plan.key_points.forEach((point) => field(point, "text"));
   plan.medications.forEach((med) => {
     field(med, "when");
     field(med, "purpose");

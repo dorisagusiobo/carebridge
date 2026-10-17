@@ -15,7 +15,9 @@ export interface Saved {
 
 function isSaved(value: unknown): value is Saved {
   const saved = value as Saved;
-  return Boolean(saved?.result?.plan && Array.isArray(saved.result.plan.warning_signs) && Array.isArray(saved.checkIns));
+  const plan = saved?.result?.plan;
+  // Plans saved before key points existed are ignored rather than shown broken.
+  return Boolean(plan && Array.isArray(plan.warning_signs) && Array.isArray(plan.key_points) && Array.isArray(saved.checkIns));
 }
 
 export function load(): Saved | null {
