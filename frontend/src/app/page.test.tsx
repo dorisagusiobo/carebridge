@@ -209,3 +209,49 @@ describe("Language", () => {
     expect(screen.getByRole("heading", { name: "What to do at home" })).toBeInTheDocument();
   });
 });
+
+describe("First screen language", () => {
+  it("translates the first screen, carries the language into the plan, and remembers it", async () => {
+    const user = userEvent.setup();
+    mockFetch(Response.json(planResult));
+    Element.prototype.scrollIntoView = vi.fn();
+    const { unmount } = render(<Home />);
+    await screen.findByRole("button", { name: "Heart failure" });
+
+    await user.selectOptions(screen.getByLabelText("Language"), "es");
+    expect(await screen.findByRole("heading", { name: "ES Understand your hospital instructions" })).toBeInTheDocument();
+    expect(screen.getByLabelText("ES Paste your discharge instructions")).toBeInTheDocument();
+    expect(screen.getByText(/ES Translated by AI. The plan will be in this language too./)).toBeInTheDocument();
+    expect(document.querySelector("main")?.getAttribute("lang")).toBe("es");
+
+    await user.click(screen.getByRole("button", { name: "ES Heart failure" }));
+    await user.click(screen.getByRole("button", { name: "ES Make my care plan" }));
+    expect(await screen.findByRole("heading", { name: "ES What to do at home" })).toBeInTheDocument();
+    expect(screen.getByText(/ES Translated by AI from English/)).toBeInTheDocument();
+
+    // Start over keeps the language for the next plan.
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: "ES Start over" }));
+    expect(screen.getByRole("heading", { name: "ES Understand your hospital instructions" })).toBeInTheDocument();
+
+    unmount();
+    render(<Home />);
+    expect(await screen.findByRole("heading", { name: "ES Understand your hospital instructions" })).toBeInTheDocument();
+  });
+
+  it("lays out right-to-left languages from the first screen, and switches back to English", async () => {
+    const user = userEvent.setup();
+    mockFetch(Response.json(planResult));
+    render(<Home />);
+    await screen.findByRole("button", { name: "Heart failure" });
+
+    await user.selectOptions(screen.getByLabelText("Language"), "ar");
+    await screen.findByRole("heading", { name: "ES Understand your hospital instructions" });
+    expect(document.querySelector("main")?.getAttribute("dir")).toBe("rtl");
+
+    await user.selectOptions(screen.getByLabelText("ES Language"), "en");
+    expect(screen.getByRole("heading", { name: "Understand your hospital instructions" })).toBeInTheDocument();
+    expect(document.querySelector("main")?.getAttribute("dir")).toBe("ltr");
+    expect(localStorage.getItem("carebridge:language")).toBeNull();
+  });
+});

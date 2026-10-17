@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { planResult } from "@/test/fixtures";
 
-import { clear, load, save } from "./storage";
+import { clear, load, loadLanguage, save, saveLanguage } from "./storage";
 
 afterEach(() => {
   localStorage.clear();
@@ -29,6 +29,14 @@ describe("storage", () => {
     expect(load()).toBeNull();
   });
 
+  it("remembers the chosen language, and forgets English", () => {
+    expect(loadLanguage()).toBe("en");
+    saveLanguage("vi");
+    expect(loadLanguage()).toBe("vi");
+    saveLanguage("en");
+    expect(localStorage.getItem("carebridge:language")).toBeNull();
+  });
+
   it("copes when storage is unavailable", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("blocked");
@@ -42,5 +50,7 @@ describe("storage", () => {
     expect(save({ result: planResult, checkIns: [] })).toBe(false);
     expect(load()).toBeNull();
     expect(() => clear()).not.toThrow();
+    expect(loadLanguage()).toBe("en");
+    expect(() => saveLanguage("es")).not.toThrow();
   });
 });

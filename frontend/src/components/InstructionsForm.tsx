@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { EN, fill, type UI } from "@/lib/i18n";
 import type { Sample } from "@/lib/types";
 
 export const MIN_CHARS = 40;
@@ -11,9 +12,12 @@ interface Props {
   samples: Sample[];
   busy: boolean;
   onSubmit: (instructions: string) => void;
+  ui?: UI;
+  /** Sample id → title in the chosen language. */
+  sampleTitles?: Record<string, string>;
 }
 
-export default function InstructionsForm({ samples, busy, onSubmit }: Props) {
+export default function InstructionsForm({ samples, busy, onSubmit, ui = EN, sampleTitles = {} }: Props) {
   const [text, setText] = useState("");
   const trimmed = text.trim();
   const tooShort = trimmed.length < MIN_CHARS;
@@ -27,11 +31,10 @@ export default function InstructionsForm({ samples, busy, onSubmit }: Props) {
       }}
     >
       <label htmlFor="instructions" className="intake-label">
-        Paste your discharge instructions
+        {ui.pasteLabel}
       </label>
       <p className="hint" id="instructions-hint">
-        Copy the text from your hospital paperwork or patient portal. Leave out your name, date of birth and record
-        numbers.
+        {ui.pasteHint}
       </p>
       <textarea
         id="instructions"
@@ -40,17 +43,17 @@ export default function InstructionsForm({ samples, busy, onSubmit }: Props) {
         maxLength={MAX_CHARS}
         rows={10}
         onChange={(event) => setText(event.target.value)}
-        placeholder="For example: Furosemide 40 mg PO once daily in the morning…"
+        placeholder={ui.pastePlaceholder}
       />
 
       {samples.length > 0 && (
         <div className="samples">
-          <p className="hint">Or try a fictional patient:</p>
+          <p className="hint">{ui.trySample}</p>
           <ul>
             {samples.map((sample) => (
               <li key={sample.id}>
                 <button type="button" className="chip" onClick={() => setText(sample.instructions)}>
-                  {sample.title}
+                  {sampleTitles[sample.id] ?? sample.title}
                 </button>
               </li>
             ))}
@@ -60,10 +63,10 @@ export default function InstructionsForm({ samples, busy, onSubmit }: Props) {
 
       <div className="intake-actions">
         <button type="submit" className="button" disabled={tooShort || busy}>
-          {busy ? "Making your plan…" : "Make my care plan"}
+          {busy ? ui.makingPlan : ui.makePlan}
         </button>
         <span className="hint">
-          {trimmed.length.toLocaleString()} / {MAX_CHARS.toLocaleString()} characters
+          {fill(ui.charCount, { count: trimmed.length.toLocaleString(), max: MAX_CHARS.toLocaleString() })}
         </span>
       </div>
     </form>

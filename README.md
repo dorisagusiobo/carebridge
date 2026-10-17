@@ -52,12 +52,13 @@ Questions come straight from the plan (no AI): which warning signs you have toda
 
 ### Translation and read aloud
 
-The plan, the check-in and every label can be shown in English, Spanish, Simplified Chinese, Vietnamese, Tagalog, Arabic (right to left), Korean, Russian, Haitian Creole, Portuguese or French, the languages most often spoken by U.S. residents with limited English.
+The first screen, the plan, the check-in and every label can be shown in English, Spanish, Simplified Chinese, Vietnamese, Tagalog, Arabic (right to left), Korean, Russian, Haitian Creole, Portuguese or French, the languages most often spoken by U.S. residents with limited English.
 
 - Translation runs after grounding and the red-flag rules, on display text only. Medicine names, doses, actions and source quotes are never sent.
 - Each translated line must keep the same numbers (doses, days, phone numbers) and placeholders as the English. Any line that doesn't stays in English, and the page says so.
 - Translated plans carry a notice that the translation is by AI and suggest asking for a free medical interpreter.
 - Interface labels are cached on the server; plan text is never kept there.
+- The language can be chosen on the first screen, before pasting anything; it's remembered on the device and the plan arrives already translated.
 - Read aloud uses the browser's own voices in the chosen language, and says when the device has no voice for it.
 
 ## Deploy
